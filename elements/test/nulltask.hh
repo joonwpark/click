@@ -8,7 +8,7 @@ CLICK_DECLS
 /*
 =c
 
-NullTask([<keyword> LIMIT, STOP])
+NullTask([<keyword> LIMIT, STOP, ACTIVE])
 
 =s test
 
@@ -31,11 +31,21 @@ forever.  Default is 0.
 Boolean.  If true, NullTask will stop the driver when LIMIT is
 reached.  Default is false.
 
+=item ACTIVE
+
+Boolean.  If false, NullTask will not schedule itself at initialization time.
+Use the C<scheduled> write handler to schedule the task later.  Default is
+true.
+
 =back
 
 =h count r
 
 Returns the number of times the element has been scheduled.
+
+=h reset w
+
+Resets the count to 0.
 
 =a
 
@@ -63,6 +73,9 @@ class NullTask : public Element { public:
     uint32_t _limit;
     Task _task;
     bool _stop;
+    bool _active;
+
+    static int write_handler(const String &str, Element *e, void *thunk, ErrorHandler *errh);
 
 };
 

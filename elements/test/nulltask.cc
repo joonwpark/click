@@ -24,7 +24,7 @@
 CLICK_DECLS
 
 NullTask::NullTask()
-    : _count(0), _limit(0), _task(this), _stop(false)
+    : _count(0), _limit(0), _task(this), _stop(false), _active(true)
 {
 }
 
@@ -38,31 +38,43 @@ NullTask::configure(Vector<String> &conf, ErrorHandler *errh)
     return cp_va_kparse(conf, this, errh,
 			"STOP", 0, cpBool, &_stop,
 			"LIMIT", 0, cpUnsigned, &_limit,
+			"ACTIVE", 0, cpBool, &_active,
 			cpEnd);
 }
 
 int
 NullTask::initialize(ErrorHandler *errh)
 {
-    ScheduleInfo::initialize_task(this, &_task, true, errh);
+    ScheduleInfo::initialize_task(this, &_task, _active, errh);
     return 0;
 }
 
 bool
 NullTask::run_task(Task *)
 {
-    if (_limit == 0 || ++_count < _limit)
+    ++_count;
+    if (_limit == 0 || _count < _limit)
 	_task.fast_reschedule();
-    if (_limit != 0 && _count >= _limit)
+    if (_limit != 0 && _count >= _limit && _stop)
 	router()->please_stop_driver();
     return true;
+}
+
+int
+NullTask::write_handler(const String &, Element *e, void *, ErrorHandler *)
+{
+    NullTask *nt = static_cast<NullTask *>(e);
+    nt->_count = 0;
+    return 0;
 }
 
 void
 NullTask::add_handlers()
 {
     add_data_handlers("count", Handler::OP_READ, &_count);
-    add_task_handlers(&_task);
+    add_data_handlers("limit", Handler::OP_READ | Handler::OP_WRITE, &_limit);
+    add_write_handler("reset", write_handler, 0);
+    add_task_handlers(&_task, 0, TASKHANDLER_WRITE_ALL);
 }
 
 CLICK_ENDDECLS
